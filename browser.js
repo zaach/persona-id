@@ -1,8 +1,8 @@
-var cookies = require('cookie-cutter');
 var http = require('http');
 var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var url = require('url');
+var qs = require('querystring');
 
 module.exports = function (opts) { return new Persona(opts) };
 
@@ -12,37 +12,20 @@ function Persona (opts) {
     if (!opts) opts = { route: '/_persona' };
     if (typeof opts === 'string') opts = { route: opts };
     
-    var routes = {};
+    self.routes = {};
     if (typeof opts.route === 'string') {
-        routes.login = opts.route + '/login';
-        routes.logout = opts.route + '/logout';
+        self.routes.login = opts.route + '/login';
+        self.routes.logout = opts.route + '/logout';
     }
-    if (opts.login) routes.login = opts.login;
-    if (opts.logout) routes.logout = opts.logout;
-    
-    if (routes.login) {
-        self.on('login', function (assertion) {
-            self._login(routes.login, assertion);
-        });
-    }
-    if (routes.logout) {
-        self.on('logout', function () {
-            self._logout(routes.logout);
-        });
-    }
-    
-    self._cookieName = opts.cookieName || '_persona_id';
-    self.on('id', function (id) {
-        cookies.set(self._cookieName, id);
-    });
-    
-    var user = opts.user || cookies.get(self._cookieName);
-    if (user) self._watch(user);
-    process.nextTick(function () {
-        self.emit('id', user);
-    });
+    if (opts.login) self.routes.login = opts.login;
+    if (opts.logout) self.routes.logout = opts.logout;
 }
 inherits(Persona, EventEmitter);
+
+Persona.prototype.set = function (id) {
+    if (id) this.emit('login', id)
+    else this.emit('logout')
+};
 
 Persona.prototype.identify = function () {
     this._watch(null);
@@ -57,13 +40,15 @@ Persona.prototype._watch = function (user) {
     var self = this;
     navigator.id.watch({
         loggedInUser: user,
-        onlogin: function (assertion) { self.emit('login', assertion) },
-        onlogout: function () { self.emit('logout') }
+        onlogin: function (assertion) { self._login(assertion) },
+        onlogout: function () { self._logout() }
     });
 };
 
-Persona.prototype._login = function (uri, assertion) {
+Persona.prototype._login = function (assertion) {
     var self = this;
+    var uri = self.routes.login;
+    
     var u = typeof uri === 'object' ? uri : url.parse(uri);
     var req = http.request({
         method: 'POST',
@@ -72,10 +57,11 @@ Persona.prototype._login = function (uri, assertion) {
         path: u.path
     });
     req.on('response', function (res) {
+        var body = '';
+        res.on('data', function (buf) { body += buf });
+        
         if (!/^2\d\d\b/.test(res.statusCode)) {
             self.id = null;
-            var body = '';
-            res.on('data', function (buf) { body += buf });
             res.on('end', function () {
                 self.emit('error', new Error(
                     'error code ' + res.statusCode + ': ' + body
@@ -84,23 +70,33 @@ Persona.prototype._login = function (uri, assertion) {
             navigator.id.logout();
         }
         else {
-            if (res.headers['set-cookie']) {
-                document.cookie = res.headers['set-cookie'];
-            }
-            
-            var id = '';
-            res.on('data', function (buf) { id += buf });
             res.on('end', function () {
-                self.id = id;
-                self.emit('id', id);
+                try { var m = JSON.parse(body) }
+                catch (err) { return self.emit('error', err) }
+                if (!m || typeof m !== 'object') {
+                    return self.emit('error',
+                        'unexpected response ' + typeof m
+                    );
+                }
+                
+                if (m && m.cookie) {
+                    for (var key in m.cookie) {
+                        document.cookie = key + '=' + m.cookie[key];
+                    }
+                }
+                if (m && m.id) {
+                    self.id = m.id;
+                    self.emit('login', m.id);
+                }
             });
         }
     });
     req.end(JSON.stringify({ assertion: assertion }));
 };
 
-Persona.prototype._logout = function (uri) {
+Persona.prototype._logout = function () {
     var self = this;
+    var uri = self.routes.logout;
     self.id = null;
     
     var u = typeof uri === 'object' ? uri : url.parse(uri);

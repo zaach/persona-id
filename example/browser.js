@@ -1,21 +1,21 @@
 var http = require('http');
 var persona = require('../')();
 
-var button = document.getElementById('identify');
-var whoami = document.getElementById('whoami');
-
-persona.on('id', function (id) {
-    if (id) {
-        button.value = 'unidentify';
-        whoami.textContent = id;
-    }
-    else button.value = 'identify';
+persona.on('login', function (id) {
+    button.value = 'unidentify';
+    whoami.textContent = id;
 });
 
 persona.on('logout', function () {
     button.value = 'identify';
     whoami.textContent = '';
 });
+
+var button = document.getElementById('identify');
+var whoami = document.getElementById('whoami');
+
+var who = whoami.textContent;
+persona.set(who);
 
 button.addEventListener('click', function () {
     if (!persona.id) {

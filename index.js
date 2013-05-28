@@ -4,11 +4,11 @@ var hyperquest = require('hyperquest');
 var qs = require('querystring');
 var EventEmitter = require('events').EventEmitter;
 
-module.exports = function (opts) {
-    return new Persona(opts);
+module.exports = function (opts, cb) {
+    return new Persona(opts, cb);
 };
 
-function Persona (opts) {
+function Persona (opts, cb) {
     if (!opts) opts = {};
     if (typeof opts === 'string') opts = { audience: opts };
     this.audience = opts.audience;
@@ -18,15 +18,18 @@ function Persona (opts) {
     this._prefixRegex = RegExp(
         '^' + quotemeta(this.prefix) + '/(login|logout)\\b'
     );
+    this.sessionCallback = cb || function () {};
 }
 
 Persona.prototype.test = function (req) {
     return req.method === 'POST' && this._prefixRegex.test(req.url);
 };
 
-Persona.prototype.handle = function (req, res) {
+Persona.prototype.handle = function (req, res, cb) {
     var self = this;
     var hEvents = new EventEmitter;
+    if (cb) hEvents.on('identify', cb);
+    
     res.setHeader('content-type', 'application/json');
     
     var m = this._prefixRegex.exec(req.url);
@@ -47,8 +50,11 @@ Persona.prototype.handle = function (req, res) {
                     res.end('bad request\n');
                 }
                 else {
-                    hEvents.emit('verify', id);
-                    res.end(id.email);
+                    hEvents.emit('identify', id);
+                    res.end(JSON.stringify({ 
+                        id: id.email,
+                        cookie: self.sessionCallback(id) || {}
+                    }));
                 }
             });
         }));
