@@ -4,22 +4,26 @@ var hyperstream = require('hyperstream');
 var cookie = require('cookie-cutter');
 var ecstatic = require('ecstatic')(__dirname + '/static');
 
+var persona = require('../')('http://localhost:5000');
+
 var sessions = {};
-var personaId = require('../');
-var persona = personaId('http://localhost:5000', function (id) {
-    var sid = Math.random();
+persona.on('create', function (sid, id) {
     sessions[sid] = id.email;
-    return { session_id: sid };
+});
+
+persona.on('destroy', function (sid) {
+    delete sessions[sid];
 });
 
 var server = http.createServer(function (req, res) {
+console.log(req.url);
     if (persona.test(req)) {
         persona.handle(req, res);
     }
     else if (req.url === '/') {
-        var id = cookie(req.headers.cookie).get('session_id')
+        var sid = persona.getId(req);
         fs.createReadStream(__dirname + '/static/index.html')
-            .pipe(hyperstream({ '#whoami': sessions[id] || '' }))
+            .pipe(hyperstream({ '#whoami': sessions[sid] || '' }))
             .pipe(res)
         ;
     }

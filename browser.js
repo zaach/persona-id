@@ -23,6 +23,7 @@ function Persona (opts) {
 inherits(Persona, EventEmitter);
 
 Persona.prototype.set = function (id) {
+    this.id = id;
     if (id) this.emit('login', id)
     else this.emit('logout')
 };
@@ -107,7 +108,7 @@ Persona.prototype._logout = function () {
         path: u.path
     });
     req.on('response', function (res) {
-        if (/^2\d\d\b/.test(res.statusCode)) {
+        if (!/^2\d\d\b/.test(res.statusCode)) {
             var body = '';
             res.on('data', function (buf) { body += buf });
             res.on('end', function () {
@@ -116,5 +117,7 @@ Persona.prototype._logout = function () {
                 ));
             });
         }
+        else self.emit('logout');
     });
+    req.end();
 };

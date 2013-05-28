@@ -3,12 +3,13 @@ var concat = require('concat-stream');
 var hyperquest = require('hyperquest');
 var qs = require('querystring');
 var EventEmitter = require('events').EventEmitter;
+var cookie = require('cookie-cutter');
+var inherits = require('inherits');
 
-module.exports = function (opts, cb) {
-    return new Persona(opts, cb);
-};
+module.exports = function (opts) { return new Persona(opts) };
+inherits(Persona, EventEmitter);
 
-function Persona (opts, cb) {
+function Persona (opts) {
     if (!opts) opts = {};
     if (typeof opts === 'string') opts = { audience: opts };
     this.audience = opts.audience;
@@ -18,18 +19,19 @@ function Persona (opts, cb) {
     this._prefixRegex = RegExp(
         '^' + quotemeta(this.prefix) + '/(login|logout)\\b'
     );
-    this.sessionCallback = cb || function () {};
+    this.sessionName = opts.sessionName || '_persona_session_id';
 }
 
 Persona.prototype.test = function (req) {
     return req.method === 'POST' && this._prefixRegex.test(req.url);
 };
 
-Persona.prototype.handle = function (req, res, cb) {
+Persona.prototype.getId = function (req) {
+    return cookie(req.headers.cookie).get(this.sessionName);
+};
+
+Persona.prototype.handle = function (req, res) {
     var self = this;
-    var hEvents = new EventEmitter;
-    if (cb) hEvents.on('identify', cb);
-    
     res.setHeader('content-type', 'application/json');
     
     var m = this._prefixRegex.exec(req.url);
@@ -50,20 +52,23 @@ Persona.prototype.handle = function (req, res, cb) {
                     res.end('bad request\n');
                 }
                 else {
-                    hEvents.emit('identify', id);
-                    res.end(JSON.stringify({ 
+                    var sid = createId();
+                    self.emit('create', sid, id);
+                    var cookie = {};
+                    cookie[self.sessionName] = sid;
+                    
+                    res.end(JSON.stringify({
                         id: id.email,
-                        cookie: self.sessionCallback(id) || {}
+                        cookie: cookie
                     }));
                 }
             });
         }));
     }
     else if (m[1] === 'logout') {
-        res.end('todo...\n');
+        self.emit('destroy', self.getId(req));
+        res.end('ok');
     }
-    
-    return hEvents;
 };
 
 Persona.prototype.verify = function (assertion, cb) {
@@ -94,8 +99,15 @@ Persona.prototype.verify = function (assertion, cb) {
             cb(null, null);
         }
         else cb(null, msg);
-        
     }));
     
     hq.end(payload);
 };
+
+function createId () {
+    var s = '';
+    for (var i = 0; i < 4; i++) {
+        s += Math.floor(Math.pow(16,8) * Math.random()).toString(16);
+    }
+    return s;
+}
