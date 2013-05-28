@@ -31,13 +31,16 @@ function Persona (opts) {
         });
     }
     
-    self._cookieName = opts.cookieName || 'persona_id';
+    self._cookieName = opts.cookieName || '_persona_id';
     self.on('id', function (id) {
         cookies.set(self._cookieName, id);
     });
     
     var user = opts.user || cookies.get(self._cookieName);
     if (user) self._watch(user);
+    process.nextTick(function () {
+        self.emit('id', user);
+    });
 }
 inherits(Persona, EventEmitter);
 
@@ -81,9 +84,16 @@ Persona.prototype._login = function (uri, assertion) {
             navigator.id.logout();
         }
         else {
-            var id = 'TESTING';
-            self.id = id;
-            self.emit('id', id);
+            if (res.headers['set-cookie']) {
+                document.cookie = res.headers['set-cookie'];
+            }
+            
+            var id = '';
+            res.on('data', function (buf) { id += buf });
+            res.on('end', function () {
+                self.id = id;
+                self.emit('id', id);
+            });
         }
     });
     req.end(JSON.stringify({ assertion: assertion }));
