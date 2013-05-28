@@ -3,6 +3,7 @@ var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var url = require('url');
 var qs = require('querystring');
+var navId = require('./vendor/persona.js');
 
 module.exports = function (opts) { return new Persona(opts) };
 
@@ -30,16 +31,17 @@ Persona.prototype.set = function (id) {
 
 Persona.prototype.identify = function () {
     this._watch(null);
-    navigator.id.request();
+    navId.request();
 };
 
 Persona.prototype.unidentify = function () {
-    navigator.id.logout();
+    navId.logout();
+    this._logout();
 };
 
 Persona.prototype._watch = function (user) {
     var self = this;
-    navigator.id.watch({
+    navId.watch({
         loggedInUser: user,
         onlogin: function (assertion) { self._login(assertion) },
         onlogout: function () { self._logout() }
@@ -68,7 +70,7 @@ Persona.prototype._login = function (assertion) {
                     'error code ' + res.statusCode + ': ' + body
                 ));
             });
-            navigator.id.logout();
+            navId.logout();
         }
         else {
             res.on('end', function () {

@@ -1,7 +1,6 @@
 var http = require('http');
 var fs = require('fs');
 var hyperstream = require('hyperstream');
-var cookie = require('cookie-cutter');
 var ecstatic = require('ecstatic')(__dirname + '/static');
 
 var persona = require('../')('http://localhost:5000');
@@ -16,7 +15,6 @@ persona.on('destroy', function (sid) {
 });
 
 var server = http.createServer(function (req, res) {
-console.log(req.url);
     if (persona.test(req)) {
         persona.handle(req, res);
     }
