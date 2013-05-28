@@ -1,54 +1,19 @@
-var identify = document.getElementById('identify');
-var email = document.getElementById('email');
+var http = require('http');
+var persona = require('../')('/auth');
 
-identify.addEventListener('click', function () {
-    if (identify.value === 'identify') {
-        watch(email);
-    }
-    else {
-        navigator.id.logout();
-    }
+var button = document.getElementById('identify');
+
+persona.on('id', function (id) {
+    button.value = 'unidentify as ' + id;
 });
 
-var http = require('http');
+persona.on('logout', function () {
+    button.value = 'identify';
+});
 
-function watch (user) {
-    navigator.id.watch({
-        loggedInUser: user,
-        onlogin: login,
-        onlogout: logout
-    });
-    navigator.id.request();
-    
-    function login (assertion) {
-        var req = http.request({
-            method: 'POST',
-            path: '/auth/login',
-        });
-        req.on('response', function (res) {
-            if (!/^2\d\d\b/.test(res.statusCode)) {
-                console.error('error code ' + res.statusCode);
-                navigator.id.logout();
-            }
-            res.on('data', function (buf) {
-                console.log(String(buf));
-            });
-        });
-        req.end(JSON.stringify({ assertion: assertion }));
+button.addEventListener('click', function () {
+    if (!persona.id) {
+        persona.identify();
     }
-    
-    function logout () {
-        var req = http.request({
-            method: 'POST',
-            path: '/auth/logout',
-        });
-        req.on('response', function (res) {
-            if (/^2\d\d\b/.test(res.statusCode)) {
-                console.error('error code ' + res.statusCode);
-            }
-            res.on('data', function (buf) {
-                console.log(String(buf));
-            });
-        });
-    }
-}
+    else persona.unidentify();
+});

@@ -1,0 +1,6 @@
+{
+  "name": "persona-id",
+  "version": "0.0.0",
+  "browser": "browser.js",
+  "main": "index.js"
+}
