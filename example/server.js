@@ -1,11 +1,10 @@
 var http = require('http');
 var ecstatic = require('ecstatic')(__dirname + '/static');
+var persona = require('../')('http://localhost:5000');
 
 var server = http.createServer(function (req, res) {
-    console.log(req.method + ' ' + req.url);
-    if (/^(PUT|POST)$/.test(req.method)) {
-        req.pipe(process.stdout, { end: false });
-        res.end('beep boop\n');
+    if (persona.test(req)) {
+        persona.handle(req, res);
     }
     else ecstatic(req, res)
 });

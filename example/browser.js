@@ -1,5 +1,5 @@
 var http = require('http');
-var persona = require('../')('/auth');
+var persona = require('../')();
 
 var button = document.getElementById('identify');
 

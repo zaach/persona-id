@@ -9,7 +9,7 @@ module.exports = function (opts) { return new Persona(opts) };
 function Persona (opts) {
     var self = this;
     
-    if (!opts) opts = {};
+    if (!opts) opts = { route: '/_persona' };
     if (typeof opts === 'string') opts = { route: opts };
     
     var routes = {};
