@@ -1,6 +1,38 @@
 {
-  "name": "persona-id",
-  "version": "0.0.0",
-  "browser": "browser.js",
-  "main": "index.js"
+    "name": "persona-id",
+    "version": "0.0.0",
+    "description": "mozilla persona single sign-on without frameworks",
+    "main": "index.js",
+    "dependencies": {
+        "inherits": "~2.0.0",
+        "quotemeta": "~0.0.0",
+        "hyperquest": "~0.1.6",
+        "cookie-cutter": "~0.0.0",
+        "concat-stream": "~1.0.0",
+    },
+    "devDependencies": {
+        "ecstatic": "~0.4.2",
+        "hyperstream": "~0.2.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/substack/persona-id.git"
+    },
+    "homepage": "https://github.com/substack/persona-id",
+    "keywords": [
+        "browser",
+        "server",
+        "mozilla",
+        "persona",
+        "auth",
+        "authentication",
+        "session",
+        "user"
+    ],
+    "author": {
+        "name": "James Halliday",
+        "email": "mail@substack.net",
+        "url": "http://substack.net"
+    },
+    "license": "MIT"
 }
