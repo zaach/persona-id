@@ -67,6 +67,7 @@ Persona.prototype.handle = function (req, res) {
     }
     else if (m[1] === 'logout') {
         self.emit('destroy', self.getId(req));
+        res.setHeader('Set-Cookie', this.sessionName + '=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
         res.end('ok');
     }
 };
